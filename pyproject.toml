@@ -15,7 +15,7 @@ classifiers = ["Development Status :: 3 - Alpha", "Intended Audience :: Science/
 dependencies = ["numpy>=1.26", "scipy>=1.12"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov", "black", "isort", "flake8", "ruff", "build", "sphinx>=7"]
+dev = ["pytest>=8", "pytest-cov", "black", "isort", "flake8", "ruff", "build", "setuptools>=77", "wheel", "sphinx>=7"]
 
 [project.scripts]
 tf-inference = "tf_inference.cli:main"
