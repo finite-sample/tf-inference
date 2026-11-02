@@ -20,8 +20,8 @@ jobs:
           python -m venv /tmp/tf-wheel
           /tmp/tf-wheel/bin/pip install dist/*.whl pytest
           cp -R tests /tmp/tf-wheel-tests
-          cd /tmp
-          /tmp/tf-wheel/bin/python -m pytest tf-wheel-tests
+          cd /tmp/tf-wheel-tests
+          /tmp/tf-wheel/bin/python -m pytest --confcutdir=.
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: distributions-python-${{ matrix.python }}
