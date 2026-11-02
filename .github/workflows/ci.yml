@@ -1,0 +1,28 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.14']
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e '.[dev]'
+      - run: make ci
+      - name: Test installed wheel outside the checkout
+        run: |
+          python -m venv /tmp/tf-wheel
+          /tmp/tf-wheel/bin/pip install dist/*.whl pytest
+          cp -R tests /tmp/tf-wheel-tests
+          cd /tmp
+          /tmp/tf-wheel/bin/python -m pytest tf-wheel-tests
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: distributions-python-${{ matrix.python }}
+          path: dist/*
