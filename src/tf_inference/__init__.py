@@ -25,27 +25,30 @@ __all__ = [
 
 
 @lru_cache(maxsize=32)
+def _computed_calibration(alpha):
+    return calibrate(alpha)
+
+
 def _calibration(alpha, method):
     if method == "table":
         return load_table(alpha)
     if method == "compute":
-        return calibrate(alpha)
-    if method == "auto":
-        return load_table(alpha) if alpha in available_alphas() else calibrate(alpha)
-    raise ValueError("method must be 'auto', 'table', or 'compute'.")
+        return _computed_calibration(alpha)
+    raise ValueError("method must be 'table' or 'compute'.")
 
 
-def critical_value(f_stat, alpha=0.05, *, method="auto"):
+def critical_value(f_stat, alpha=0.05, *, method="table"):
     """Return tF critical values for absolute t using a table or numerical construction.
 
-    ``auto`` uses an exact matching bundled alpha, otherwise computes a new
-    calibration. No interpolation across significance levels is performed.
+    The default requires an exact matching bundled alpha. Explicitly select
+    ``method="compute"`` for cached numerical calibration at another level.
+    No interpolation across significance levels is performed.
     For custom numerical tolerances use ``calibrate`` and inspect its diagnostics.
     """
     return _calibration(float(alpha), method).critical_value(f_stat)
 
 
-def confidence_interval(coefficient, se, f_stat, alpha=0.05, *, method="auto"):
+def confidence_interval(coefficient, se, f_stat, alpha=0.05, *, method="table"):
     """Return tF confidence intervals with lower/upper bounds on the last axis."""
     return _calibration(float(alpha), method).confidence_interval(
         coefficient, se, f_stat

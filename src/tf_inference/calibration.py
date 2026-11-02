@@ -1,6 +1,7 @@
 """Numerical plateau selection, audit records, and inference."""
 
 from dataclasses import asdict, dataclass
+from math import isfinite
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -60,6 +61,11 @@ class Calibration:
     def critical_value(self, f_stat: ArrayLike):
         """Evaluate critical values, with infinity at and below the boundary."""
         values = np.asarray(f_stat, dtype=float)
+        if values.ndim == 0:
+            value = float(values)
+            if not isfinite(value) or value < 0:
+                raise ValueError("F must be finite and nonnegative.")
+            return self.curve.critical(min(value, self.plateau_f))
         if np.any(~np.isfinite(values)) or np.any(values < 0):
             raise ValueError("F must be finite and nonnegative.")
         return self.curve.critical(np.minimum(values, self.plateau_f))

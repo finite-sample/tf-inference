@@ -1,0 +1,78 @@
+{
+  "environment": {
+    "python": "3.13.16",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "notes": "Imports excluded; cold load clears only the package cache, not OS caches. Calibration calls are uncached. Timings are local observations, not CI assertions.",
+  "benchmarks": {
+    "cold_table_load": {
+      "median_seconds": 0.0008707499946467578,
+      "samples_seconds": [
+        0.004019999993033707,
+        0.0009402499999850988,
+        0.0008707499946467578,
+        0.0008334160083904862,
+        0.0007958750065881759
+      ],
+      "calls_per_sample": 1
+    },
+    "warm_scalar": {
+      "median_seconds": 1.177336669934448e-05,
+      "samples_seconds": [
+        1.1699450001469813e-05,
+        1.177336669934448e-05,
+        1.1917366698617116e-05,
+        1.187308749940712e-05,
+        1.1574212499544956e-05
+      ],
+      "calls_per_sample": 10000
+    },
+    "reused_scalar": {
+      "median_seconds": 1.1831487499875948e-05,
+      "samples_seconds": [
+        1.17495291022351e-05,
+        1.7535512498579918e-05,
+        1.1964374998933636e-05,
+        1.1831487499875948e-05,
+        1.1640620898106135e-05
+      ],
+      "calls_per_sample": 10000
+    },
+    "warm_array_100000": {
+      "median_seconds": 0.0007209275002242066,
+      "samples_seconds": [
+        0.0007209275002242066,
+        0.0006983262501307763,
+        0.0007329154098988511,
+        0.0007376845899852925,
+        0.0007194704201538115
+      ],
+      "calls_per_sample": 100
+    },
+    "fresh_calibrate_0.05": {
+      "median_seconds": 2.446139374980703,
+      "samples_seconds": [
+        2.422389249986736,
+        2.4124762920255307,
+        2.446139374980703,
+        2.483384582999861,
+        2.4624165830027778
+      ],
+      "calls_per_sample": 1
+    },
+    "fresh_calibrate_0.037": {
+      "median_seconds": 8.247357500018552,
+      "samples_seconds": [
+        8.137008833000436,
+        8.171284124982776,
+        8.247357500018552,
+        8.39089754098677,
+        8.724868833000073
+      ],
+      "calls_per_sample": 1
+    }
+  }
+}

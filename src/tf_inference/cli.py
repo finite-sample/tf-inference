@@ -15,9 +15,7 @@ def main(argv=None):
     evaluate = commands.add_parser("critical", help="Evaluate tF critical values")
     evaluate.add_argument("F", nargs="+", type=float)
     evaluate.add_argument("--alpha", type=float, default=0.05)
-    evaluate.add_argument(
-        "--method", choices=["auto", "table", "compute"], default="auto"
-    )
+    evaluate.add_argument("--method", choices=["table", "compute"], default="table")
     generate = commands.add_parser(
         "generate", help="Construct and export numerical tables"
     )
@@ -30,7 +28,12 @@ def main(argv=None):
     generate.add_argument("--strength-limit", type=float, default=80)
     args = parser.parse_args(argv)
     if args.command == "critical":
-        values = np.atleast_1d(critical_value(args.F, args.alpha, method=args.method))
+        try:
+            values = np.atleast_1d(
+                critical_value(args.F, args.alpha, method=args.method)
+            )
+        except ValueError as error:
+            parser.error(str(error))
         print("F,critical_value")
         for f_stat, value in zip(args.F, values, strict=True):
             print(f"{f_stat:.17g},{value:.17g}")

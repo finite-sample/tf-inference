@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 from dataclasses import replace
+from functools import lru_cache
 from importlib.resources import files
 from pathlib import Path
 
@@ -97,12 +98,23 @@ def export_table(calibration: Calibration, directory, *, points: int = 16385):
 
 
 def load_table(alpha: float = 0.05, *, directory=None) -> Calibration:
-    """Load a generated calibration; never interpolate between alpha levels."""
-    root = (
-        Path(directory)
-        if directory is not None
-        else files("tf_inference").joinpath("data")
-    )
+    """Load a calibration, caching bundled tables across all public entry points.
+
+    Custom directories are read and checksum-verified on every call. No
+    interpolation between alpha levels is performed.
+    """
+    alpha = validate_alpha(alpha)
+    if directory is None:
+        return _load_bundled_table(alpha)
+    return _read_table(alpha, Path(directory))
+
+
+@lru_cache(maxsize=32)
+def _load_bundled_table(alpha):
+    return _read_table(alpha, files("tf_inference").joinpath("data"))
+
+
+def _read_table(alpha, root):
     prefix = f"alpha-{table_key(alpha)}"
     metadata_path = root.joinpath(prefix + ".json")
     if not metadata_path.is_file():
@@ -113,9 +125,10 @@ def load_table(alpha: float = 0.05, *, directory=None) -> Calibration:
     if metadata["schema_version"] != 1 or metadata["alpha"] != float(alpha):
         raise ValueError("Unsupported or inconsistent table metadata.")
     npz = root.joinpath(prefix + ".npz")
-    if hashlib.sha256(npz.read_bytes()).hexdigest() != metadata["npz_sha256"]:
+    contents = npz.read_bytes()
+    if hashlib.sha256(contents).hexdigest() != metadata["npz_sha256"]:
         raise ValueError("Table checksum does not match its metadata.")
-    with npz.open("rb") as handle, np.load(handle, allow_pickle=False) as data:
+    with np.load(io.BytesIO(contents), allow_pickle=False) as data:
         f, regularized = data["f"], data["regularized"]
     f.setflags(write=False)
     regularized.setflags(write=False)

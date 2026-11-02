@@ -1,6 +1,7 @@
 """The Appendix B.3 inverse map and the Property (C) endpoint."""
 
 from dataclasses import dataclass
+from math import isfinite
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -52,6 +53,15 @@ class Curve:
     def critical(self, f_stat: ArrayLike):
         """Evaluate the decreasing branch within its constructed domain."""
         values = np.asarray(f_stat, dtype=float)
+        if values.ndim == 0:
+            value = float(values)
+            if not isfinite(value) or value < 0:
+                raise ValueError("F must be finite and nonnegative.")
+            if value > self.f[-1]:
+                raise ValueError("F lies outside the constructed decreasing branch.")
+            if value <= self.boundary:
+                return float("inf")
+            return float(np.sqrt(self._spline(value) / (value - self.boundary)))
         if np.any(~np.isfinite(values)) or np.any(values < 0):
             raise ValueError("F must be finite and nonnegative.")
         if np.any(values > self.f[-1]):

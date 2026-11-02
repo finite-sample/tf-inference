@@ -73,10 +73,21 @@ Calculate an unconventional level
     calibration.confidence_interval(1, 0.4, 10)
     print(calibration.diagnostics)
 
-``critical_value(..., method="auto")`` uses an exactly matching bundled level
-when available and otherwise runs ``calibrate``. ``method="table"`` requires a
-table; ``method="compute"`` always constructs and calibrates a curve. The
-convenience functions cache up to 32 calibrations in the current process.
+The Python convenience functions and CLI default to ``method="table"``. A
+missing level raises an error immediately; numerical calibration requires
+``method="compute"`` or a direct call to ``calibrate``. No slow calculation is
+started implicitly. The ``auto`` method is not supported.
+
+Bundled tables are loaded once per alpha and shared by ``load_table``,
+``critical_value`` and ``confidence_interval``. Repeated lookup does not read
+files, verify checksums again or rebuild the interpolator. Explicit
+``method="compute"`` calls use a separate cache of up to 32 calibrations.
+Direct ``calibrate`` calls always compute afresh. Tables loaded from a custom
+directory are read and checksum-verified on each call so changes are detected.
+
+For large inputs, pass a NumPy array in one call. For repeated work at one
+level, retain ``load_table(alpha)`` or the result of ``calibrate(alpha)`` and
+call its methods directly.
 
 The numerical alpha domain is [0.0001, 0.25]. It covers confidence levels from
 75% to 99.99%. This is an explicit implementation range, not a theoretical limit
@@ -152,6 +163,45 @@ grid points. The strong-instrument limit is checked separately by the normal
 critical-value constraint. The unbounded nuisance domain is not exhaustively
 certified. The recorded integration error does not include curve approximation
 or missed extrema in the parameter search.
+
+Performance
+-----------
+
+Local medians from five repeats on macOS ARM64, Python 3.13.16, NumPy 2.5.4
+and SciPy 1.18.1:
+
+.. list-table:: Lookup and numerical calibration
+   :header-rows: 1
+
+   * - Operation
+     - Before
+     - After
+   * - Warm scalar lookup
+     - 11.77 microseconds
+     - 3.54 microseconds
+   * - 100,000 F values in one array
+     - 0.72 milliseconds
+     - 0.69 milliseconds
+   * - Fresh calibration, alpha=0.05
+     - 2.45 seconds
+     - 1.14 seconds
+   * - Fresh calibration, alpha=0.037
+     - 8.25 seconds
+     - 3.78 seconds
+
+Loading the 95% table with the package cache empty takes a median 0.87 ms.
+These measurements exclude imports and retain operating-system file caches.
+The scalar path avoids array masks and reductions; calibration uses the same
+search grid, integration tolerances and optimization settings as before.
+
+Reproduce the measurements with ``make benchmark``. Individual samples,
+iteration counts and environment details are in ``benchmarks/results.json``;
+``benchmarks/baseline.json`` records the same benchmark against commit
+``f55f167``. Local lookup targets are under 20 microseconds per warm scalar,
+2 ms per 100,000-value array and 10 ms per table load. These are measurement
+targets, not timing assertions on shared CI runners. Tests instead enforce
+that default calls never calibrate and warm calls avoid file access and
+interpolator construction.
 
 Validation and development
 --------------------------

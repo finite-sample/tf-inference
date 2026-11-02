@@ -67,6 +67,20 @@ def test_monotonicity(curve):
     assert np.all(np.diff(curve.critical(f)) < 0)
 
 
+@pytest.mark.parametrize("value", [-1, np.nan, np.inf, -np.inf])
+def test_invalid_scalar_and_vector_f(curve, value):
+    for argument in [value, np.array(value), [value]]:
+        with pytest.raises(ValueError, match="finite and nonnegative"):
+            curve.critical(argument)
+
+
+def test_scalar_and_vector_domain_limit(curve):
+    value = np.nextafter(curve.f[-1], np.inf)
+    for argument in [value, np.array(value), [value]]:
+        with pytest.raises(ValueError, match="outside"):
+            curve.critical(argument)
+
+
 @pytest.mark.parametrize("alpha", [0, 1, -0.1, np.nan, np.inf, 0.00001, 0.3])
 def test_invalid_alpha(alpha):
     with pytest.raises(ValueError, match="alpha"):

@@ -15,6 +15,92 @@ from tf_inference import (
 from tf_inference.cli import main
 
 
+def test_default_never_computes(monkeypatch, capsys):
+    import tf_inference
+
+    def unexpected_compute(*args, **kwargs):
+        pytest.fail("Default lookup attempted numerical calibration")
+
+    tf_inference._computed_calibration.cache_clear()
+    monkeypatch.setattr(tf_inference, "calibrate", unexpected_compute)
+    assert np.isfinite(critical_value(10))
+    assert np.isfinite(confidence_interval(1, 0.4, 10)).all()
+    for operation in [
+        lambda: critical_value(10, alpha=0.037),
+        lambda: confidence_interval(1, 0.4, 10, alpha=0.037),
+    ]:
+        with pytest.raises(ValueError, match="method='compute'"):
+            operation()
+    with pytest.raises(SystemExit) as error:
+        main(["critical", "10", "--alpha", "0.037"])
+    assert error.value.code == 2
+    assert "method='compute'" in capsys.readouterr().err
+
+
+def test_bundled_cache_shared_without_warm_io(monkeypatch, capsys):
+    from tf_inference import tables
+
+    tables._load_bundled_table.cache_clear()
+    calibration = load_table()
+
+    def unexpected_work(*args, **kwargs):
+        pytest.fail("Warm lookup accessed files or rebuilt interpolation")
+
+    monkeypatch.setattr(tables, "files", unexpected_work)
+    monkeypatch.setattr(Path, "open", unexpected_work)
+    monkeypatch.setattr(tables.hashlib, "sha256", unexpected_work)
+    monkeypatch.setattr(tables, "PchipInterpolator", unexpected_work)
+    assert load_table() is calibration
+    assert critical_value(10) == calibration.critical_value(10)
+    assert_allclose(
+        confidence_interval(1, 0.4, 10), calibration.confidence_interval(1, 0.4, 10)
+    )
+    main(["critical", "10"])
+    assert "3.430" in capsys.readouterr().out
+
+
+def test_explicit_compute_reuses_calibration(monkeypatch):
+    import tf_inference
+
+    calls = []
+    calibration = load_table()
+
+    def compute(alpha):
+        calls.append(alpha)
+        return calibration
+
+    tf_inference._computed_calibration.cache_clear()
+    monkeypatch.setattr(tf_inference, "calibrate", compute)
+    try:
+        critical_value(10, method="compute")
+        confidence_interval(1, 0.4, 10, method="compute")
+        assert calls == [0.05]
+    finally:
+        tf_inference._computed_calibration.cache_clear()
+
+
+@pytest.mark.parametrize("alpha", available_alphas())
+def test_scalar_matches_vectorized(alpha):
+    calibration = load_table(alpha)
+    curve = calibration.curve
+    f = np.r_[
+        0,
+        curve.boundary,
+        np.nextafter(curve.boundary, np.inf),
+        curve.boundary
+        + np.geomspace(1e-10, calibration.plateau_f - curve.boundary, 100),
+        curve.f[-1],
+    ]
+    assert_allclose([curve.critical(x) for x in f], curve.critical(f), rtol=1e-15)
+    f = np.r_[f, 1e20]
+    assert_allclose(
+        [calibration.critical_value(x) for x in f],
+        calibration.critical_value(f),
+        rtol=1e-15,
+    )
+    assert isinstance(calibration.critical_value(np.array(10.0)), float)
+
+
 def test_bundled_levels_and_intervals():
     assert len(available_alphas()) == 18
     for alpha in available_alphas():
@@ -77,9 +163,10 @@ def test_no_alpha_interpolation():
         critical_value(10, alpha=0.037, method="table")
 
 
-def test_unknown_method():
+@pytest.mark.parametrize("method", ["unknown", "auto"])
+def test_unknown_method(method):
     with pytest.raises(ValueError, match="method"):
-        critical_value(10, method="unknown")
+        critical_value(10, method=method)
 
 
 def test_command_line_generation(tmp_path, capsys):

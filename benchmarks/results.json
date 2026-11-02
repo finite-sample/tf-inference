@@ -1,0 +1,78 @@
+{
+  "environment": {
+    "python": "3.13.16",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "notes": "Imports excluded; cold load clears only the package cache, not OS caches. Calibration calls are uncached. Timings are local observations, not CI assertions.",
+  "benchmarks": {
+    "cold_table_load": {
+      "median_seconds": 0.000870458985446021,
+      "samples_seconds": [
+        0.0018939999863505363,
+        0.000942167011089623,
+        0.000870458985446021,
+        0.0008460000099148601,
+        0.0008287079981528223
+      ],
+      "calls_per_sample": 1
+    },
+    "warm_scalar": {
+      "median_seconds": 3.5439500003121793e-06,
+      "samples_seconds": [
+        3.6144375015283004e-06,
+        3.538558300351724e-06,
+        3.5439500003121793e-06,
+        3.5446791996946557e-06,
+        3.5132667020661757e-06
+      ],
+      "calls_per_sample": 10000
+    },
+    "reused_scalar": {
+      "median_seconds": 3.0115084024146197e-06,
+      "samples_seconds": [
+        3.07390829839278e-06,
+        2.9816624999511987e-06,
+        2.9548749997047707e-06,
+        3.0115084024146197e-06,
+        3.039670898579061e-06
+      ],
+      "calls_per_sample": 10000
+    },
+    "warm_array_100000": {
+      "median_seconds": 0.0006931995900231414,
+      "samples_seconds": [
+        0.0006980362499598414,
+        0.0006931025002268143,
+        0.0006913133297348395,
+        0.0006946887500816956,
+        0.0006931995900231414
+      ],
+      "calls_per_sample": 100
+    },
+    "fresh_calibrate_0.05": {
+      "median_seconds": 1.1404353749821894,
+      "samples_seconds": [
+        1.1490227910107933,
+        1.0953749589971267,
+        1.1894122499797959,
+        1.1404353749821894,
+        1.1169814169988967
+      ],
+      "calls_per_sample": 1
+    },
+    "fresh_calibrate_0.037": {
+      "median_seconds": 3.7844332919921726,
+      "samples_seconds": [
+        3.7894602500018664,
+        3.8677879580063745,
+        3.7844332919921726,
+        3.767105625011027,
+        3.7595974169962574
+      ],
+      "calls_per_sample": 1
+    }
+  }
+}
