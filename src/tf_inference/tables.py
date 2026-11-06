@@ -130,10 +130,13 @@ def _from_dataset(
     rows = table.filter(pa.array(table.column("alpha").to_numpy() == alpha))
     f = rows.column("f_stat").to_numpy().copy()
     regularized = rows.column("regularized_squared").to_numpy().copy()
-    boundary = float(ndtri(alpha / 2) ** 2)
+    boundary = record["boundary"]
+    theoretical_boundary = float(ndtri(alpha / 2) ** 2)
     if (
         record["alpha"] != alpha
-        or record["boundary"] != boundary
+        or not np.isclose(
+            boundary, theoretical_boundary, rtol=16 * np.finfo(float).eps, atol=0
+        )
         or len(f) != record["points"]
         or len(f) < 2
         or f[0] != boundary
@@ -152,6 +155,9 @@ def _from_dataset(
         raise ValueError(
             "Calibration table or metadata violates its numerical invariants."
         )
+    critical = np.sqrt(regularized[1:] / (f[1:] - boundary))
+    if np.any(np.diff(critical) > 1e-12 * critical[:-1]):
+        raise ValueError("Calibration knots must describe a decreasing branch.")
     f.setflags(write=False)
     regularized.setflags(write=False)
     curve = Curve(
@@ -192,10 +198,10 @@ def _from_dataset(
     ):
         raise ValueError("Calibration diagnostics require finite numeric scalars.")
     if (
-        not 0 <= diagnostics.maximum_rejection <= 1
+        not 0 <= diagnostics.maximum_rejection <= alpha + diagnostics.size_tolerance
         or not 0 <= diagnostics.worst_rho <= 1
         or not 0 <= diagnostics.worst_strength <= diagnostics.strength_limit
-        or diagnostics.integration_error < 0
+        or not 0 <= diagnostics.integration_error <= diagnostics.size_tolerance / 5
         or not 1e-9 <= diagnostics.size_tolerance <= 1e-3
         or diagnostics.strength_limit < 20
         or not isinstance(diagnostics.evaluations, int)
@@ -210,7 +216,8 @@ def _from_dataset(
     ):
         raise ValueError("Calibration diagnostics violate their numerical domains.")
     if (
-        diagnostics.alpha != alpha
+        diagnostics.plateau_critical < np.sqrt(theoretical_boundary) * (1 - 1e-12)
+        or diagnostics.alpha != alpha
         or diagnostics.plateau_f != record["plateau_f"]
         or diagnostics.property_c_endpoint != record["property_c_endpoint"]
         or not np.isclose(

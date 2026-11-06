@@ -81,7 +81,10 @@ def rejection_probability(
     Symmetry allows their absolute values. This is asymptotic size, not a
     finite-sample coverage guarantee. The error excludes curve approximation.
     """
-    if any(np.iscomplexobj(value) for value in (strength, rho, plateau_f, atol)):
+    if any(
+        value is not None and np.iscomplexobj(value)
+        for value in (strength, rho, plateau_f, atol)
+    ):
         raise ValueError("strength, rho, plateau_f and atol must be real.")
     strength, rho = float(strength), float(rho)
     if not np.isfinite(strength) or not np.isfinite(rho) or abs(rho) > 1:

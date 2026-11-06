@@ -127,3 +127,44 @@ def test_reject_invalid_diagnostics(dataset, field, value):
     write_table(dataset, table)
     with pytest.raises(ValueError, match="diagnostics"):
         load_table(0.05, directory=dataset)
+
+
+def test_platform_quantile_roundoff_uses_stored_boundary(dataset, monkeypatch):
+    from tf_inference import tables
+
+    original = tables.ndtri
+    monkeypatch.setattr(tables, "ndtri", lambda x: np.nextafter(original(x), np.inf))
+    actual = load_table(0.05, directory=dataset)
+    expected = load_table(0.05)
+    assert actual.boundary == expected.boundary
+    f = np.nextafter(expected.boundary, np.inf)
+    assert actual.critical_value(f) == expected.critical_value(f)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"), [("maximum_rejection", 0.9), ("integration_error", 0.5)]
+)
+def test_diagnostics_must_describe_successful_calibration(dataset, field, value):
+    table = pq.read_table(dataset / "calibrations.parquet")
+    metadata = json.loads(table.schema.metadata[b"tf_inference"])
+    metadata["0.05"]["diagnostics"][field] = value
+    table = table.replace_schema_metadata(
+        {b"tf_inference": json.dumps(metadata).encode()}
+    )
+    write_table(dataset, table)
+    with pytest.raises(ValueError, match="diagnostics"):
+        load_table(0.05, directory=dataset)
+
+
+def test_decreasing_branch_required(dataset):
+    table = pq.read_table(dataset / "calibrations.parquet")
+    values = table.column("regularized_squared").to_numpy().copy()
+    positions = np.flatnonzero(
+        (table.column("alpha").to_numpy() == 0.05)
+        & (table.column("f_stat").to_numpy() > 9)
+    )
+    values[positions[0]] *= 100
+    table = table.set_column(2, table.schema.field(2), pa.array(values))
+    write_table(dataset, table)
+    with pytest.raises(ValueError, match="decreasing"):
+        load_table(0.05, directory=dataset)

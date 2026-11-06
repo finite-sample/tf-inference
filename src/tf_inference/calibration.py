@@ -110,7 +110,7 @@ def calibrate(
     grid nor local optimization certifies the supremum over all nuisance values.
     """
     if any(
-        np.iscomplexobj(value)
+        value is not None and np.iscomplexobj(value)
         for value in (size_tolerance, strength_limit, correlations, strengths)
     ):
         raise ValueError("Calibration settings must be real.")

@@ -1,8 +1,8 @@
 # tf-inference
 
-[![PyPI](https://img.shields.io/pypi/v/tf-inference.svg)](https://pypi.org/project/tf-inference/)
+![PyPI](https://img.shields.io/pypi/v/tf-inference.svg)
 [![CI](https://github.com/finite-sample/tf-inference/actions/workflows/ci.yml/badge.svg)](https://github.com/finite-sample/tf-inference/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/pypi/pyversions/tf-inference.svg)](https://pypi.org/project/tf-inference/)
+![Python](https://img.shields.io/pypi/pyversions/tf-inference.svg)
 
 tf-inference computes tF critical values and confidence intervals for
 instrumental-variable (IV) models with one endogenous regressor and one
@@ -206,7 +206,8 @@ integration, independent Gaussian Monte Carlo calculations,
 unconventional-alpha plateau adjustment, interval broadcasting, table
 roundtrips and corrupted files, Parquet schema violations, complex inputs and
 large-strength numerical stability. `make ci` runs Ruff, Pyright, pydoclint,
-tests with a 90% branch-coverage floor, documentation and distribution checks.
+tests with a 90% coverage floor (including branch measurement), documentation
+and distribution checks.
 `preen check --strict` checks adoption of the shared py-canon standard.
 
 `validation/validate.py` evaluates bundled tables against finer
