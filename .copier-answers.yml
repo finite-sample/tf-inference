@@ -3,7 +3,7 @@ _commit: v1.3.0
 _src_path: gh:gojiplus/py-canon
 author_email: gsood07@gmail.com
 author_name: Gaurav Sood
-coverage_floor: 0
+coverage_floor: 90
 default_branch: main
 description: Numerically constructed tF critical values for single-instrument IV inference
 needs_cli: true
