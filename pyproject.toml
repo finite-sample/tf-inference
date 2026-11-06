@@ -87,4 +87,4 @@ fail_under = 90
 [dependency-groups]
 docs = ["sphinx>=8", "furo", "myst-parser", "sphinx-copybutton", "py-canon @ git+https://github.com/gojiplus/py-canon@v1"]
 test = ["pytest>=8", "pytest-cov>=6"]
-dev = [{include-group = "test"}, "ruff>=0.14", "pyright>=1.1.390", "pre-commit>=4", "pydoclint==0.9.1", "codespell", "deptry", "build", "twine", "pip-audit", "pylint"]
+dev = [{include-group = "test"}, "ruff>=0.14", "pyright>=1.1.390", "pre-commit>=4", "pydoclint==0.12.0", "codespell", "deptry", "build", "twine", "pip-audit", "pylint"]
