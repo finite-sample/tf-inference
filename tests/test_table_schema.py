@@ -168,3 +168,40 @@ def test_decreasing_branch_required(dataset):
     write_table(dataset, table)
     with pytest.raises(ValueError, match="decreasing"):
         load_table(0.05, directory=dataset)
+
+
+def test_decreasing_knots_do_not_imply_decreasing_interpolation(dataset):
+    table = pq.read_table(dataset / "calibrations.parquet")
+    metadata = json.loads(table.schema.metadata[b"tf_inference"])
+    record = metadata["0.05"]
+    f = np.array(
+        [
+            record["boundary"],
+            3.8979517962086194,
+            21.591309166952364,
+            50.545915685432895,
+            59.37927824729297,
+            record["plateau_f"],
+            record["property_c_endpoint"],
+        ]
+    )
+    z = np.array(
+        [
+            record["boundary"] ** 3,
+            15.495615727471716,
+            4492.574358311533,
+            1903.632819864526,
+            347.07479468829695,
+            387.3315714822953,
+            454.21220828259146,
+        ]
+    )
+    assert np.all(np.diff(np.sqrt(z[1:] / (f[1:] - f[0]))) < 0)
+    record["points"] = len(f)
+    table = pa.table([np.full(len(f), 0.05), f, z], schema=table.schema)
+    table = table.replace_schema_metadata(
+        {b"tf_inference": json.dumps({"0.05": record}).encode()}
+    )
+    write_table(dataset, table)
+    with pytest.raises(ValueError, match="decreasing"):
+        load_table(0.05, directory=dataset)

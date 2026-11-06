@@ -81,6 +81,25 @@ def _bundled_dataset() -> tuple[pa.Table, dict[str, Any]]:
     return _read_dataset(files("tf_inference").joinpath("data"))
 
 
+def _validate_decreasing_spline(spline: PchipInterpolator, boundary: float) -> None:
+    """Check the sign of the squared critical value's derivative on every cell."""
+    a, b, c, d = spline.c
+    width = np.diff(spline.x)
+    offset = spline.x[:-1] - boundary
+    stationary = np.zeros_like(a)
+    np.divide(-b, 3 * a, out=stationary, where=a != 0)
+    stationary = np.clip(stationary, 0, width)
+    # For a local cubic Z(t), the derivative has the sign of
+    # Q=(t+offset)*Z'-Z. Q'=2*(t+offset)*(3*a*t+b), so its only possible
+    # interior extremum is -b/(3*a); the other root is outside the cell.
+    for t in (np.zeros_like(width), width, stationary):
+        value = ((a * t + b) * t + c) * t + d
+        scaled_derivative = (t + offset) * ((3 * a * t + 2 * b) * t + c)
+        tolerance = 1e-12 * (np.abs(value) + np.abs(scaled_derivative))
+        if np.any(scaled_derivative - value > tolerance):
+            raise ValueError("Calibration interpolation must be decreasing.")
+
+
 def _from_dataset(
     alpha: float, table: pa.Table, metadata: dict[str, Any]
 ) -> Calibration:
@@ -160,6 +179,8 @@ def _from_dataset(
         raise ValueError("Calibration knots must describe a decreasing branch.")
     f.setflags(write=False)
     regularized.setflags(write=False)
+    spline = PchipInterpolator(f, regularized, extrapolate=False)
+    _validate_decreasing_spline(spline, boundary)
     curve = Curve(
         alpha,
         boundary,
@@ -169,7 +190,7 @@ def _from_dataset(
         record["seeds"],
         record["property_c_endpoint"],
         record["minimum_plateau_f"],
-        PchipInterpolator(f, regularized, extrapolate=False),
+        spline,
     )
     try:
         diagnostics = CalibrationDiagnostics(**record["diagnostics"])
