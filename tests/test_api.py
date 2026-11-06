@@ -117,7 +117,7 @@ def test_bundled_levels_and_intervals():
 
 
 @pytest.mark.parametrize(
-    "alpha,filename", [(0.05, "table3a.csv"), (0.01, "table3b.csv")]
+    ("alpha", "filename"), [(0.05, "table3a.csv"), (0.01, "table3b.csv")]
 )
 def test_published_reference_values(alpha, filename):
     table = np.loadtxt(
@@ -133,10 +133,11 @@ def test_published_reference_values(alpha, filename):
     assert np.all(curve.critical(f - f_rounding) >= printed - 0.0011)
 
 
-def test_csv_values_match_public_api():
-    from importlib.resources import files
+def test_csv_values_match_public_api(tmp_path):
+    from tf_inference import export_table
 
-    path = files("tf_inference").joinpath("data", "alpha-0.05.csv.gz")
+    export_table(load_table(), tmp_path, include_csv=True)
+    path = tmp_path / "alpha-0.05.csv.gz"
     with path.open("rb") as stream, gzip.open(stream, "rt") as decoded:
         values = np.loadtxt(decoded, delimiter=",", skiprows=1)
     assert_allclose(critical_value(values[:, 0]), values[:, 1], rtol=1e-13)

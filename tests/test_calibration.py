@@ -57,7 +57,7 @@ def test_table_roundtrip_and_checksum(calibration, tmp_path):
     )
     assert restored.diagnostics == calibration.diagnostics
     assert metadata["table_relative_error_on_midpoints"] < 1e-6
-    table_file = tmp_path / "alpha-0.05.npz"
+    table_file = tmp_path / "calibrations.parquet"
     table_file.write_bytes(table_file.read_bytes() + b"corruption")
     with pytest.raises(ValueError, match="checksum"):
         load_table(0.05, directory=tmp_path)
