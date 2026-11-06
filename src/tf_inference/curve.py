@@ -2,11 +2,12 @@
 
 from dataclasses import dataclass
 from math import isfinite
+from typing import cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.interpolate import PchipInterpolator
-from scipy.optimize import brentq, minimize_scalar
+from scipy.optimize import OptimizeResult, brentq, minimize_scalar
 from scipy.special import ndtr, ndtri
 
 
@@ -16,6 +17,8 @@ class ConvergenceError(RuntimeError):
 
 def validate_alpha(alpha: float) -> float:
     """Validate the numerical implementation's significance-level domain."""
+    if np.iscomplexobj(alpha):
+        raise ValueError("alpha must be real.")
     alpha = float(alpha)
     if not np.isfinite(alpha) or not 0.0001 <= alpha <= 0.25:
         raise ValueError("alpha must be finite and between 0.0001 and 0.25.")
@@ -50,8 +53,33 @@ class Curve:
     minimum_plateau_f: float
     _spline: PchipInterpolator
 
+    def regularized_squared(self, f_stat: ArrayLike):
+        """Evaluate the finite regularized squared critical value.
+
+        Args:
+            f_stat: Real F values between the boundary and the branch endpoint.
+
+        Returns:
+            Values of (F - boundary) times the squared critical value.
+
+        Raises:
+            ValueError: If F is non-real, nonfinite, or outside the branch.
+        """
+        if np.iscomplexobj(f_stat):
+            raise ValueError("F must be real.")
+        values = np.asarray(f_stat, dtype=float)
+        if (
+            np.any(~np.isfinite(values))
+            or np.any(values < self.boundary)
+            or np.any(values > self.f[-1])
+        ):
+            raise ValueError("F lies outside the constructed decreasing branch.")
+        return self._spline(values)
+
     def critical(self, f_stat: ArrayLike):
         """Evaluate the decreasing branch within its constructed domain."""
+        if np.iscomplexobj(f_stat):
+            raise ValueError("F must be real.")
         values = np.asarray(f_stat, dtype=float)
         if values.ndim == 0:
             value = float(values)
@@ -79,22 +107,22 @@ def construct_curve(
 ) -> Curve:
     """Construct Appendix B.3's decreasing branch and its admissible endpoint.
 
-    Parameters
-    ----------
-    alpha : float
-        Two-sided significance level, between 0.0001 and 0.25.
-    epsilon : float
-        Distance from the chi-square boundary used to initialize the recurrence.
-        Smaller values reduce initialization error but can increase roundoff.
-    seeds : int
-        Number of starting points across one inverse-map interval.
+    Args:
+        alpha: Two-sided significance level, between 0.0001 and 0.25.
+        epsilon: Initialization distance from the chi-square boundary.
+        seeds: Number of starting points across one inverse-map interval.
 
-    Notes
-    -----
-    This constructs a candidate curve. Use ``calibrate`` to check its plateau
-    against numerical rejection probabilities before using it for inference.
+    Returns:
+        Candidate decreasing curve and its admissible endpoint. Use ``calibrate``
+        to check a plateau before using the curve for inference.
+
+    Raises:
+        ValueError: If the significance level or construction settings are invalid.
+        ConvergenceError: If the recurrence or tangency calculation fails.
     """
     alpha = validate_alpha(alpha)
+    if np.iscomplexobj(epsilon):
+        raise ValueError("epsilon must be real.")
     if not np.isfinite(epsilon) or not 1e-6 <= epsilon <= 1e-3:
         raise ValueError("epsilon must be between 1e-6 and 1e-3.")
     if isinstance(seeds, bool) or not isinstance(seeds, int) or seeds < 32:
@@ -138,22 +166,30 @@ def construct_curve(
     # F / (sqrt(F) - critical(F)). This is the tangency in Property (C).
     lower = f[1:][f[1:] > critical**2][0]
     upper = min(1e4, f[-1])
-    contact = minimize_scalar(
-        lambda value: value / (np.sqrt(value) - cv(value)),
-        bounds=(lower, upper),
-        method="bounded",
-        options={"xatol": 1e-9},
+    contact = cast(
+        "OptimizeResult",
+        minimize_scalar(
+            lambda value: value / (np.sqrt(value) - cv(value)),
+            bounds=(lower, upper),
+            method="bounded",
+            options={"xatol": 1e-9},
+        ),
     )
     if not contact.success:
         raise ConvergenceError("Could not locate the Property (C) tangency.")
-    endpoint = brentq(
-        lambda value: value / (np.sqrt(value) + cv(value)) - contact.fun,
-        contact.x,
-        upper,
+    endpoint = cast(
+        "float",
+        brentq(
+            lambda value: value / (np.sqrt(value) + cv(value)) - contact.fun,
+            contact.x,
+            upper,
+        ),
     )
     plateau_f = endpoint
     if cv(endpoint) < np.sqrt(q):
-        plateau_f = brentq(lambda value: cv(value) - np.sqrt(q), q + epsilon, endpoint)
+        plateau_f = cast(
+            "float", brentq(lambda value: cv(value) - np.sqrt(q), q + epsilon, endpoint)
+        )
     f.setflags(write=False)
     regularized.setflags(write=False)
     return Curve(alpha, q, f, regularized, epsilon, seeds, endpoint, plateau_f, spline)

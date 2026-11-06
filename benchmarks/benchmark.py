@@ -15,6 +15,7 @@ from tf_inference import tables
 
 
 def measure(function, *, number, repeat):
+    """Measure per-call wall time over repeated samples."""
     samples = [
         value / number
         for value in timeit.repeat(function, number=number, repeat=repeat)
@@ -27,6 +28,7 @@ def measure(function, *, number, repeat):
 
 
 def main():
+    """Write reproducible lookup and calibration timings."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repeat", type=int, default=5)
@@ -35,9 +37,8 @@ def main():
         parser.error("--repeat must be at least 3")
 
     def cold_load():
-        loader = getattr(tables, "_load_bundled_table", None)
-        if loader is not None:
-            loader.cache_clear()
+        tables._bundled_dataset.cache_clear()
+        tables._load_bundled_table.cache_clear()
         return tf.load_table()
 
     results = {"cold_table_load": measure(cold_load, number=1, repeat=args.repeat)}

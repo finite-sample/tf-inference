@@ -91,5 +91,5 @@ def test_invalid_alpha(alpha):
     "kwargs", [{"epsilon": 0}, {"epsilon": np.nan}, {"seeds": 1}, {"seeds": 32.5}]
 )
 def test_invalid_numerical_settings(kwargs):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must be"):
         construct_curve(**kwargs)

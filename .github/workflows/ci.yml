@@ -1,28 +1,27 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"  # weekly: surface ecosystem drift on quiet repos
+  # A merge made with GITHUB_TOKEN does not trigger workflows, so an
+  # auto-merged Dependabot PR leaves the default branch at a commit no CI run
+  # ever covered. The auto-merge sweep dispatches this after it lands one.
+  workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.11', '3.14']
-    steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-python@v7.1.0
-        with:
-          python-version: ${{ matrix.python }}
-      - run: python -m pip install -e '.[dev]'
-      - run: make ci
-      - name: Test installed wheel outside the checkout
-        run: |
-          python -m venv /tmp/tf-wheel
-          /tmp/tf-wheel/bin/pip install dist/*.whl pytest
-          cp -R tests /tmp/tf-wheel-tests
-          cd /tmp/tf-wheel-tests
-          /tmp/tf-wheel/bin/python -m pytest --confcutdir=.
-      - uses: actions/upload-artifact@v7.0.2
-        with:
-          name: distributions-python-${{ matrix.python }}
-          path: dist/*
+  ci:
+    uses: gojiplus/py-canon/.github/workflows/reusable-ci.yml@v1
+    with:
+      wheel-import: tf_inference
+      coverage-floor: 90
+      run-preen: true

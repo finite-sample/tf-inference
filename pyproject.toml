@@ -1,21 +1,19 @@
 [build-system]
-requires = ["setuptools>=77", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.12.5,<0.14"]
+build-backend = "uv_build"
 
 [project]
 name = "tf-inference"
 version = "0.1.0"
 description = "Numerically constructed tF critical values for single-instrument IV inference"
-readme = "README.rst"
-requires-python = ">=3.11"
+readme = "README.md"
+requires-python = ">=3.12"
 license = "MIT"
 authors = [{name = "Gaurav Sood"}]
 keywords = ["instrumental variables", "weak instruments", "econometrics", "inference", "tF"]
 classifiers = ["Development Status :: 3 - Alpha", "Intended Audience :: Science/Research", "Programming Language :: Python :: 3", "Topic :: Scientific/Engineering :: Mathematics"]
-dependencies = ["numpy>=1.26", "scipy>=1.12"]
-
-[project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov", "black", "isort", "flake8", "ruff", "build", "setuptools>=77", "wheel", "sphinx>=7"]
+dependencies = ["numpy>=1.26", "scipy>=1.12", "pyarrow>=18"]
+license-files = ["LICENSE"]
 
 [project.scripts]
 tf-inference = "tf_inference.cli:main"
@@ -26,27 +24,67 @@ Repository = "https://github.com/finite-sample/tf-inference"
 Issues = "https://github.com/finite-sample/tf-inference/issues"
 Documentation = "https://github.com/finite-sample/tf-inference#readme"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-tf_inference = ["data/*.npz", "data/*.json", "data/*.csv.gz", "py.typed"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra --strict-config --strict-markers"
 filterwarnings = ["error"]
-
-[tool.black]
-line-length = 88
-target-version = ["py311"]
-
-[tool.isort]
-profile = "black"
+minversion = "8"
+log_level = "INFO"
+xfail_strict = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "B", "I", "UP"]
+external = ["DOC"]
+select = [
+    "E", "W", "F", "I", "B", "C4", "UP", "N", "D", "S", "SIM", "T20", "PT", "RUF",
+    "PTH", "RET", "PIE", "FURB", "PERF", "DTZ", "LOG", "G", "TC", "FLY",
+    "RSE", "SLOT", "FA", "A", "EXE", "ICN", "PGH", "PLE", "ARG", "SLF",
+]
+# D203/D213: the google convention the fleet standard picks. W191/D206/D300:
+# ruff's own docs list these as always incompatible with `ruff format`, which
+# the standard also runs.
+ignore = ["D203", "D213", "W191", "D206", "D300"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "D", "ARG", "SLF"]
+"docs/**" = ["D"]
+"src/tf_inference/cli.py" = ["T201"]
+"benchmarks/**" = ["T201", "SLF001"]
+"validation/**" = ["T201"]
+
+[tool.pyright]
+include = ["src"]
+typeCheckingMode = "standard"
+
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = false
+check-yield-types = false
+check-class-attributes = false
+allow-init-docstring = true
+exclude = '\.venv|tests|docs'
+
+[tool.codespell]
+builtin = "clear,rare,en-GB_to_en-US"
+ignore-words-list = "aer"
+
+[tool.uv.build-backend]
+module-name = "tf_inference"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+[dependency-groups]
+docs = ["sphinx>=8", "furo", "myst-parser", "sphinx-copybutton", "py-canon @ git+https://github.com/gojiplus/py-canon@v1"]
+test = ["pytest>=8", "pytest-cov>=6"]
+dev = [{include-group = "test"}, "ruff>=0.14", "pyright>=1.1.390", "pre-commit>=4", "pydoclint==0.9.1", "codespell", "deptry", "build", "twine", "pip-audit", "pylint"]

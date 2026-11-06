@@ -22,6 +22,7 @@ def main(argv=None):
     generate.add_argument("--alpha", nargs="+", type=float, required=True)
     generate.add_argument("--output", required=True)
     generate.add_argument("--points", type=int, default=16385)
+    generate.add_argument("--csv", action="store_true", help="Also export gzip CSV")
     generate.add_argument("--epsilon", type=float, default=1e-4)
     generate.add_argument("--seeds", type=int, default=256)
     generate.add_argument("--size-tolerance", type=float, default=2e-7)
@@ -46,7 +47,9 @@ def main(argv=None):
                 size_tolerance=args.size_tolerance,
                 strength_limit=args.strength_limit,
             )
-            metadata = export_table(calibration, args.output, points=args.points)
+            metadata = export_table(
+                calibration, args.output, points=args.points, include_csv=args.csv
+            )
             print(json.dumps(metadata), flush=True)
 
 

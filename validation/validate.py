@@ -22,6 +22,7 @@ from tf_inference import (
 
 
 def validate(alpha):
+    """Check one table against refined curves and held-out nuisance values."""
     table = load_table(alpha)
     reference = construct_curve(alpha, epsilon=2.5e-5, seeds=512)
     rng = np.random.default_rng(20261102)
@@ -67,6 +68,7 @@ def validate(alpha):
 
 
 def main():
+    """Write validation against refined curves and held-out size checks."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="validation/results.json")
     args = parser.parse_args()

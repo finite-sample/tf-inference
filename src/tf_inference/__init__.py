@@ -3,7 +3,7 @@
 from functools import lru_cache
 
 from .calibration import Calibration, CalibrationDiagnostics, calibrate
-from .curve import ConvergenceError, Curve, construct_curve
+from .curve import ConvergenceError, Curve, construct_curve, validate_alpha
 from .probability import RejectionProbability, rejection_probability
 from .tables import available_alphas, export_table, load_table
 
@@ -45,11 +45,11 @@ def critical_value(f_stat, alpha=0.05, *, method="table"):
     No interpolation across significance levels is performed.
     For custom numerical tolerances use ``calibrate`` and inspect its diagnostics.
     """
-    return _calibration(float(alpha), method).critical_value(f_stat)
+    return _calibration(validate_alpha(alpha), method).critical_value(f_stat)
 
 
 def confidence_interval(coefficient, se, f_stat, alpha=0.05, *, method="table"):
     """Return tF confidence intervals with lower/upper bounds on the last axis."""
-    return _calibration(float(alpha), method).confidence_interval(
+    return _calibration(validate_alpha(alpha), method).confidence_interval(
         coefficient, se, f_stat
     )

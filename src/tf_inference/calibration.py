@@ -2,10 +2,11 @@
 
 from dataclasses import asdict, dataclass
 from math import isfinite
+from typing import cast
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.optimize import brentq, minimize, minimize_scalar
+from scipy.optimize import OptimizeResult, brentq, minimize, minimize_scalar
 
 from .curve import ConvergenceError, Curve, construct_curve
 from .probability import rejection_probability
@@ -60,6 +61,8 @@ class Calibration:
 
     def critical_value(self, f_stat: ArrayLike):
         """Evaluate critical values, with infinity at and below the boundary."""
+        if np.iscomplexobj(f_stat):
+            raise ValueError("F must be real.")
         values = np.asarray(f_stat, dtype=float)
         if values.ndim == 0:
             value = float(values)
@@ -74,6 +77,8 @@ class Calibration:
         self, coefficient: ArrayLike, se: ArrayLike, f_stat: ArrayLike
     ):
         """Construct intervals; broadcast inputs and put lower/upper bounds last."""
+        if any(np.iscomplexobj(value) for value in (coefficient, se, f_stat)):
+            raise ValueError("coefficient, se and F must be real.")
         coefficient, se, f_stat = np.broadcast_arrays(coefficient, se, f_stat)
         if (
             np.any(~np.isfinite(coefficient))
@@ -104,6 +109,11 @@ def calibrate(
     report the finite search domain and numerical tolerances. Neither a finite
     grid nor local optimization certifies the supremum over all nuisance values.
     """
+    if any(
+        value is not None and np.iscomplexobj(value)
+        for value in (size_tolerance, strength_limit, correlations, strengths)
+    ):
+        raise ValueError("Calibration settings must be real.")
     if not np.isfinite(size_tolerance) or not 1e-9 <= size_tolerance <= 1e-3:
         raise ValueError("size_tolerance must be between 1e-9 and 1e-3.")
     if not np.isfinite(strength_limit) or strength_limit < 20:
@@ -149,11 +159,14 @@ def calibrate(
             singular = sorted((p, m) for p, m, r in records if r == 1)
             for _, m in singular[-3:]:
                 lo, hi = max(0.001, m / 1.5), min(strength_limit, max(m + 1, m * 1.5))
-                result = minimize_scalar(
-                    lambda x: -evaluate(x, 1.0, candidate),
-                    bounds=(lo, hi),
-                    method="bounded",
-                    options={"xatol": 1e-5},
+                result = cast(
+                    "OptimizeResult",
+                    minimize_scalar(
+                        lambda x: -evaluate(x, 1.0, candidate),
+                        bounds=(lo, hi),
+                        method="bounded",
+                        options={"xatol": 1e-5},
+                    ),
                 )
                 if result.success:
                     records.append((-float(result.fun), float(result.x), 1.0))
@@ -202,9 +215,14 @@ def calibrate(
         lower = curve.boundary + epsilon
         if evaluate(m, rho, lower) > target:
             raise ConvergenceError("No admissible plateau resolves the size violation.")
-        stop = brentq(
-            lambda value, m=m, rho=rho, target=target: evaluate(m, rho, value) - target,
-            lower,
-            stop,
+        stop = cast(
+            "float",
+            brentq(
+                lambda value, m=m, rho=rho, target=target: (
+                    evaluate(m, rho, value) - target
+                ),
+                lower,
+                stop,
+            ),
         )
     raise ConvergenceError("Plateau calibration exceeded 12 adjustments.")

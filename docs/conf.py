@@ -1,5 +1,5 @@
-project = "tf-inference"
-author = "Gaurav Sood"
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon"]
-html_theme = "alabaster"
-exclude_patterns = ["_build"]
+"""Sphinx configuration — fleet standard via py-canon."""
+
+from py_canon.sphinx import configure
+
+configure(globals())
